@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Attendance QR</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<section id="loginPage" class="loginPage">
+  <div class="loginCard">
+    <h1>Teacher Login</h1>
+    <p>Student Attendance Management System</p>
+    <form onsubmit="teacherLogin(event)">
+      <label>Username</label>
+      <input id="teacherUsername" autocomplete="username" placeholder="Teacher username" required>
+      <label>Password</label>
+      <input id="teacherPassword" type="password" autocomplete="current-password" placeholder="Teacher password" required>
+      <button class="primary loginBtn" type="submit">Login</button>
+      <p id="loginMsg"></p>
+    </form>
+  </div>
+</section>
+
+<div id="appShell" class="hidden">
+<header>
+  <h1>Student Attendance</h1>
+  <p>Subject-wise QR Attendance Management System</p>
+</header>
+
+<nav>
+  <button onclick="show('students')">Students</button>
+  <button onclick="show('subjects')">Subjects</button>
+  <button onclick="show('scan')">Attendance</button>
+  <button onclick="show('reports')">Reports</button>
+  <button onclick="show('backup')">Backup</button>
+  <button class="logoutBtn" onclick="teacherLogout()">Logout</button>
+</nav>
+
+<main>
+<section id="students" class="page">
+  <h2>Students</h2>
+  <div class="card">
+    <h3>Add Student</h3>
+    <div class="grid">
+      <input id="roll" placeholder="Roll No">
+      <input id="name" placeholder="Student Name">
+      <input id="className" placeholder="Class">
+      <input id="division" placeholder="Division">
+      <input id="email" type="email" placeholder="Student Email">
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="addStudent()">Add Student</button>
+      <label class="fileBtn">Import CSV<input type="file" id="csv" accept=".csv" onchange="importCSV(event)"></label>
+      <button onclick="downloadCSVTemplate()">CSV Template</button>
+    </div>
+    <p id="msg"></p>
+  </div>
+  <div class="card">
+    <div class="toolbar">
+      <input id="search" placeholder="Search name / roll / class" oninput="renderStudents()">
+      <span id="count"></span>
+    </div>
+    <div id="studentList"></div>
+  </div>
+</section>
+
+<section id="subjects" class="page hidden">
+  <h2>Subjects</h2>
+  <div class="card">
+    <h3>Add Subject</h3>
+    <div class="grid">
+      <input id="subjectCode" placeholder="Subject Code e.g. CS101">
+      <input id="subjectName" placeholder="Subject Name e.g. Java">
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="addSubject()">Add Subject</button>
+    </div>
+    <p id="subjectMsg"></p>
+  </div>
+  <div class="card">
+    <h3>Available Subjects</h3>
+    <div id="subjectList"></div>
+  </div>
+</section>
+
+<section id="scan" class="page hidden">
+  <h2>Take Attendance</h2>
+  <div class="card">
+    <h3>1. Start Attendance Session</h3>
+    <div class="grid">
+      <select id="attendanceSubject"><option value="">Select Subject</option></select>
+      <input id="sessionTitle" placeholder="Session / Lecture Name (optional)">
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="createAttendanceSession()">Generate Attendance QR</button>
+      <button onclick="closeAttendanceSession()">Close Session</button>
+    </div>
+    <div id="activeSessionBox" class="sessionBox hidden">
+      <h3 id="activeSessionSubject"></h3>
+      <p id="activeSessionDetails"></p>
+      <div id="sessionQR"></div>
+      <div class="actions">
+        <button onclick="downloadSessionQR()">Download QR PNG</button>
+        <button onclick="shareSessionQR()">Email QR</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>2. Scan Student QR</h3>
+    <p>Students show their personal QR code to the teacher's camera/device.</p>
+    <div id="reader"></div>
+    <p id="scanMsg"></p>
+    <div class="actions">
+      <button onclick="startScanner()">Start Camera</button>
+      <button onclick="stopScanner()">Stop Camera</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Today's Attendance</h3>
+    <div id="todayList"></div>
+  </div>
+</section>
+
+<section id="reports" class="page hidden">
+  <h2>Attendance Reports</h2>
+  <div class="card">
+    <div class="grid">
+      <select id="reportSubject"><option value="">All Subjects</option></select>
+      <input id="fromDate" type="date">
+      <input id="toDate" type="date">
+      <select id="reportStudent"><option value="">All Students</option></select>
+    </div>
+    <div class="actions">
+      <button onclick="renderReport()">Generate Report</button>
+      <button onclick="exportExcel()">Export Excel</button>
+      <button onclick="exportPDF()">Export PDF</button>
+    </div>
+  </div>
+  <div class="card"><h3>Attendance Summary</h3><div id="summary"></div></div>
+  <div class="card"><div id="reportTable"></div></div>
+</section>
+
+<section id="backup" class="page hidden">
+  <h2>Database Backup</h2>
+  <div class="card">
+    <h3>Backup</h3>
+    <p>Download a complete backup of students, subjects, sessions and attendance.</p>
+    <button class="primary" onclick="downloadBackup()">Download Database Backup</button>
+  </div>
+  <div class="card">
+    <h3>Restore</h3>
+    <p>Restore a previously downloaded JSON backup.</p>
+    <label class="fileBtn">Restore Backup<input type="file" accept=".json" onchange="restoreBackup(event)"></label>
+  </div>
+</section>
+</main>
+
+<div id="qrModal" class="modal hidden">
+  <div class="modalBox">
+    <button class="close" onclick="closeQR()">×</button>
+    <h2 id="qrTitle"></h2>
+    <div id="qr"></div>
+    <p id="qrText"></p>
+    <div class="actions">
+      <button onclick="downloadQR()">Download QR PNG</button>
+      <button onclick="emailQR()">Email QR</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</div>
+</body>
+</html>
